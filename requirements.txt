@@ -1,0 +1,6 @@
+langgraph
+langchain-core
+anthropic
+deepdiff
+tavily-python
+python-dotenv
