@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentTrace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0b0c0b;
+    --surface:  #111311;
+    --surface2: #181a18;
+    --border:   #252825;
+    --border2:  #2f332f;
+    --green:    #39d353;
+    --green2:   #1a6626;
+    --green-bg: #0a1a0d;
+    --amber:    #e8a020;
+    --amber-bg: #1a1100;
+    --red:      #e05050;
+    --red-bg:   #1a0a0a;
+    --blue:     #5096e8;
+    --text:     #d4dbd4;
+    --text2:    #8a968a;
+    --text3:    #505850;
+    --mono:     'Space Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .layout {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 48px;
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 20px;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: -0.02em;
+  }
+
+  .logo-slash { color: var(--text3); margin: 0 2px; }
+
+  .tagline {
+    font-size: 13px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  /* Status dot */
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-left: auto;
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+
+  /* Query form */
+  .query-section { margin-bottom: 32px; }
+
+  .query-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .query-label::before {
+    content: '>';
+    color: var(--green);
+  }
+
+  .query-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  textarea {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 14px 16px;
+    resize: none;
+    min-height: 80px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea::placeholder { color: var(--text3); }
+  textarea:focus { border-color: var(--green2); }
+
+  button {
+    background: var(--green-bg);
+    border: 1px solid var(--green2);
+    border-radius: 6px;
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 80px;
+    letter-spacing: 0.04em;
+  }
+  button:hover { background: #0f2214; border-color: var(--green); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Progress */
+  .progress {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .progress.visible { display: flex; }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result card */
+  .result {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    animation: fadeUp 0.3s ease;
+  }
+  .result.visible { display: flex; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Section headers */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Answer block */
+  .answer-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-left: 3px solid var(--green);
+    border-radius: 6px;
+    padding: 20px;
+  }
+  .answer-text {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  /* Sub-queries */
+  .sub-queries {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sub-query {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--blue);
+    padding: 6px 10px;
+    background: #080f1a;
+    border: 1px solid #1a2d4a;
+    border-radius: 4px;
+  }
+  .sub-query::before { content: '⌕  '; opacity: 0.6; }
+
+  /* Spans timeline */
+  .spans {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .span-row {
+    display: grid;
+    grid-template-columns: 20px 100px 1fr 60px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .span-ok   { color: var(--green); }
+  .span-fail { color: var(--red); }
+  .span-node { color: var(--amber); }
+  .span-changed { color: var(--text3); font-size: 11px; }
+  .span-ms   { color: var(--text3); text-align: right; }
+
+  /* Anomalies */
+  .anomaly-list { display: flex; flex-direction: column; gap: 6px; }
+  .anomaly {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .anomaly.high   { background: var(--red-bg);   border: 1px solid #4a1a1a; }
+  .anomaly.medium { background: var(--amber-bg); border: 1px solid #4a3000; }
+  .anomaly.low    { background: #080f1a;         border: 1px solid #1a2d4a; }
+  .anomaly-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .anomaly.high   .anomaly-badge { background: #3a0a0a; color: var(--red); }
+  .anomaly.medium .anomaly-badge { background: #2a1800; color: var(--amber); }
+  .anomaly.low    .anomaly-badge { background: #0a1828; color: var(--blue); }
+  .anomaly-desc { color: var(--text2); line-height: 1.5; }
+
+  /* No anomalies */
+  .no-anomalies {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--green);
+    padding: 10px 14px;
+    background: var(--green-bg);
+    border: 1px solid var(--green2);
+    border-radius: 4px;
+  }
+  .no-anomalies::before { content: '✓  '; }
+
+  /* Run ID footer */
+  .run-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  /* Error */
+  .error-msg {
+    display: none;
+    padding: 12px 16px;
+    background: var(--red-bg);
+    border: 1px solid #4a1a1a;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 10px;
+  }
+  .error-msg.visible { display: block; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <header>
+    <div class="logo">Agent<span class="logo-slash">/</span>Trace</div>
+    <div class="tagline">auditable research agent</div>
+    <div class="status-dot"></div>
+  </header>
+
+  <div class="query-section">
+    <div class="query-label">query</div>
+    <div class="query-input-row">
+      <textarea id="queryInput" placeholder="Ask anything — the agent will research and synthesize an answer..." rows="3"></textarea>
+      <button id="runBtn" onclick="runQuery()">RUN</button>
+    </div>
+    <div class="progress" id="progress">
+      <div class="spinner"></div>
+      <span id="progressText">Initialising agent...</span>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div class="result" id="result">
+
+    <div>
+      <div class="section-label">answer</div>
+      <div class="answer-card">
+        <div class="answer-text" id="answerText"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">search queries generated</div>
+      <div class="sub-queries" id="subQueries"></div>
+    </div>
+
+    <div>
+      <div class="section-label">execution trace</div>
+      <div class="spans" id="spans"></div>
+    </div>
+
+    <div>
+      <div class="section-label">anomaly detection</div>
+      <div id="anomalies"></div>
+    </div>
+
+    <div class="run-meta" id="runMeta"></div>
+
+  </div>
+
+</div>
+
+<script>
+  const progressMessages = [
+    "Planning search queries...",
+    "Searching the web...",
+    "Synthesizing answer...",
+    "Running anomaly detection...",
+  ];
+  let progressTimer;
+
+  function setProgress(msg) {
+    document.getElementById("progressText").textContent = msg;
+  }
+
+  async function runQuery() {
+    const query = document.getElementById("queryInput").value.trim();
+    if (!query) return;
+
+    const btn      = document.getElementById("runBtn");
+    const progress = document.getElementById("progress");
+    const result   = document.getElementById("result");
+    const errorMsg = document.getElementById("errorMsg");
+
+    btn.disabled = true;
+    result.classList.remove("visible");
+    errorMsg.classList.remove("visible");
+    progress.classList.add("visible");
+
+    // Cycle through progress messages
+    let i = 0;
+    setProgress(progressMessages[0]);
+    progressTimer = setInterval(() => {
+      i = (i + 1) % progressMessages.length;
+      setProgress(progressMessages[i]);
+    }, 2200);
+
+    try {
+      const res = await fetch("/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Request failed");
+      }
+
+      const data = await res.json();
+      renderResult(data);
+
+    } catch (err) {
+      errorMsg.textContent = `Error: ${err.message}`;
+      errorMsg.classList.add("visible");
+    } finally {
+      clearInterval(progressTimer);
+      progress.classList.remove("visible");
+      btn.disabled = false;
+    }
+  }
+
+  function renderResult(data) {
+    // Answer
+    document.getElementById("answerText").textContent = data.answer;
+
+    // Sub-queries
+    const sqEl = document.getElementById("subQueries");
+    sqEl.innerHTML = data.sub_queries.map(q =>
+      `<div class="sub-query">${escHtml(q)}</div>`
+    ).join("");
+
+    // Spans
+    const spansEl = document.getElementById("spans");
+    spansEl.innerHTML = data.spans.map(s => {
+      const ok      = s.success ? '<span class="span-ok">✓</span>' : '<span class="span-fail">✗</span>';
+      const changed = s.changed.length ? s.changed.join(", ") : "—";
+      return `
+        <div class="span-row">
+          ${ok}
+          <span class="span-node">${escHtml(s.node)}</span>
+          <span class="span-changed">${escHtml(changed)}</span>
+          <span class="span-ms">${s.ms}ms</span>
+        </div>`;
+    }).join("");
+
+    // Anomalies
+    const anomEl = document.getElementById("anomalies");
+    if (!data.anomalies.length) {
+      anomEl.innerHTML = `<div class="no-anomalies">No anomalies detected in this run</div>`;
+    } else {
+      anomEl.innerHTML = `<div class="anomaly-list">` +
+        data.anomalies.map(a => `
+          <div class="anomaly ${a.severity}">
+            <span class="anomaly-badge">${a.severity.toUpperCase()}</span>
+            <span class="anomaly-desc"><strong>${escHtml(a.type)}</strong> — ${escHtml(a.description)}</span>
+          </div>`
+        ).join("") +
+        `</div>`;
+    }
+
+    // Run ID
+    document.getElementById("runMeta").textContent = `run_id: ${data.run_id}`;
+
+    document.getElementById("result").classList.add("visible");
+    document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // Submit on Ctrl+Enter
+  document.getElementById("queryInput").addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runQuery();
+  });
+</script>
+</body>
+</html>

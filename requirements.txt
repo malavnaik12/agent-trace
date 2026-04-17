@@ -4,3 +4,5 @@ anthropic
 deepdiff
 tavily-python
 python-dotenv
+fastapi
+uvicorn

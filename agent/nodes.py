@@ -11,12 +11,15 @@ import os
 from anthropic import Anthropic
 from tavily import TavilyClient
 from agent.state import AgentState
-from dotenv import load_dotenv
 
-load_dotenv()
+_llm    = Anthropic()
+_tavily = None
 
-_llm = Anthropic()
-_tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+def _get_tavily():
+    global _tavily
+    if _tavily is None:
+        _tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+    return _tavily
 
 
 def plan(state: AgentState) -> AgentState:
@@ -37,11 +40,9 @@ def plan(state: AgentState) -> AgentState:
         line.strip()
         for line in response.content[0].text.strip().splitlines()
         if line.strip()
-    ][
-        :3
-    ]  # cap at 3
-    tokens = response.usage.input_tokens + response.usage.output_tokens
-    return {**state, "sub_queries": sub_queries, "tokens_this_node": tokens}
+    ][:3]  # cap at 3
+
+    return {**state, "sub_queries": sub_queries}
 
 
 def search(state: AgentState) -> AgentState:
@@ -50,22 +51,16 @@ def search(state: AgentState) -> AgentState:
     """
     all_results = []
     for q in state["sub_queries"]:
-        results = _tavily.search(q, max_results=3)
+        results = _get_tavily().search(q, max_results=3)
         for r in results.get("results", []):
-            all_results.append(
-                {
-                    "query": q,
-                    "url": r.get("url", ""),
-                    "title": r.get("title", ""),
-                    "snippet": r.get("content", "")[:500],
-                }
-            )
-    return {
-        **state,
-        "search_results": all_results,
-        "iteration": state["iteration"] + 1,
-        "tokens_this_node": 0,
-    }
+            all_results.append({
+                "query": q,
+                "url":     r.get("url", ""),
+                "title":   r.get("title", ""),
+                "snippet": r.get("content", "")[:500],
+            })
+
+    return {**state, "search_results": all_results, "iteration": state["iteration"] + 1}
 
 
 def synthesize(state: AgentState) -> AgentState:
@@ -73,7 +68,8 @@ def synthesize(state: AgentState) -> AgentState:
     Produce a grounded answer from the search results.
     """
     context = "\n\n".join(
-        f"[{r['title']}] ({r['url']})\n{r['snippet']}" for r in state["search_results"]
+        f"[{r['title']}] ({r['url']})\n{r['snippet']}"
+        for r in state["search_results"]
     )
 
     response = _llm.messages.create(
@@ -83,16 +79,10 @@ def synthesize(state: AgentState) -> AgentState:
             "You are a research synthesizer. Using only the provided search results, "
             "answer the question clearly and concisely. Cite sources by URL inline."
         ),
-        messages=[
-            {
-                "role": "user",
-                "content": f"Question: {state['query']}\n\nSearch results:\n{context}",
-            }
-        ],
+        messages=[{
+            "role": "user",
+            "content": f"Question: {state['query']}\n\nSearch results:\n{context}"
+        }],
     )
-    tokens = response.usage.input_tokens + response.usage.output_tokens
-    return {
-        **state,
-        "final_answer": response.content[0].text.strip(),
-        "tokens_this_node": tokens,
-    }
+
+    return {**state, "final_answer": response.content[0].text.strip()}
