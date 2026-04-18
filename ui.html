@@ -6,6 +6,7 @@
 <title>AgentTrace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 <style>
   :root {
     --bg:       #0b0c0b;
@@ -29,313 +30,246 @@
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
 
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Grid background */
   body::before {
     content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(var(--border) 1px, transparent 1px),
-      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    position: fixed; inset: 0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
     background-size: 40px 40px;
-    opacity: 0.4;
-    pointer-events: none;
-    z-index: 0;
+    opacity: 0.4; pointer-events: none; z-index: 0;
   }
 
-  .layout {
-    position: relative;
-    z-index: 1;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 48px 24px 80px;
-  }
+  .layout { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 48px 24px 80px; }
 
-  /* Header */
-  header {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-    margin-bottom: 48px;
-    border-bottom: 1px solid var(--border2);
-    padding-bottom: 20px;
-  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  @keyframes spin  { to{transform:rotate(360deg)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
-  .logo {
-    font-family: var(--mono);
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--green);
-    letter-spacing: -0.02em;
-  }
+  /* ── Header ──────────────────────────────────────────────────────────────── */
+  header { display:flex; align-items:baseline; gap:16px; margin-bottom:48px; border-bottom:1px solid var(--border2); padding-bottom:20px; }
+  .logo { font-family:var(--mono); font-size:18px; font-weight:700; color:var(--green); letter-spacing:-0.02em; }
+  .logo-slash { color:var(--text3); margin:0 2px; }
+  .tagline { font-size:13px; color:var(--text3); font-family:var(--mono); }
+  .status-dot { width:7px;height:7px;border-radius:50%;background:var(--green);margin-left:auto;box-shadow:0 0 8px var(--green);animation:pulse 2.5s ease-in-out infinite; }
 
-  .logo-slash { color: var(--text3); margin: 0 2px; }
+  /* ── Shared section label ────────────────────────────────────────────────── */
+  .section-label { font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:8px; }
+  .section-label::after { content:'';flex:1;height:1px;background:var(--border); }
+  .section-label .badge { font-size:10px;padding:1px 7px;border-radius:3px;font-weight:700; }
+  .section-label .badge.anomaly { background:var(--red-bg);border:1px solid #4a1a1a;color:var(--red); }
+  .section-label .badge.ok { background:var(--green-bg);border:1px solid var(--green2);color:var(--green); }
 
-  .tagline {
-    font-size: 13px;
-    color: var(--text3);
-    font-family: var(--mono);
-  }
-
-  /* Status dot */
-  .status-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--green);
-    margin-left: auto;
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse 2.5s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.3; }
-  }
-
-  /* Query form */
-  .query-section { margin-bottom: 32px; }
-
-  .query-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .query-label::before {
-    content: '>';
-    color: var(--green);
-  }
-
-  .query-input-row {
-    display: flex;
-    gap: 10px;
-    align-items: stretch;
-  }
-
-  textarea {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-    padding: 14px 16px;
-    resize: none;
-    min-height: 80px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  textarea::placeholder { color: var(--text3); }
-  textarea:focus { border-color: var(--green2); }
-
-  button {
-    background: var(--green-bg);
-    border: 1px solid var(--green2);
-    border-radius: 6px;
-    color: var(--green);
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 700;
-    padding: 0 20px;
-    cursor: pointer;
-    transition: all 0.15s;
-    min-width: 80px;
-    letter-spacing: 0.04em;
-  }
-  button:hover { background: #0f2214; border-color: var(--green); }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* Progress */
-  .progress {
-    display: none;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 6px;
-    margin-top: 10px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text2);
-  }
-  .progress.visible { display: flex; }
-  .spinner {
-    width: 14px; height: 14px;
-    border: 2px solid var(--border2);
-    border-top-color: var(--green);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Result card */
-  .result {
-    display: none;
-    flex-direction: column;
-    gap: 16px;
-    animation: fadeUp 0.3s ease;
-  }
-  .result.visible { display: flex; }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* Section headers */
-  .section-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--text3);
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  /* Answer block */
-  .answer-card {
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-left: 3px solid var(--green);
-    border-radius: 6px;
-    padding: 20px;
-  }
-  .answer-text {
+  /* ── Markdown answer rendering ───────────────────────────────────────────── */
+  /* Applied inside .answer-text (manual + test) and .detail-answer (run cards) */
+  .answer-text, .detail-answer {
     font-size: 14px;
     line-height: 1.75;
     color: var(--text);
-    white-space: pre-wrap;
   }
+  .answer-text p, .detail-answer p { margin-bottom: 10px; }
+  .answer-text p:last-child, .detail-answer p:last-child { margin-bottom: 0; }
+  .answer-text h1, .detail-answer h1,
+  .answer-text h2, .detail-answer h2,
+  .answer-text h3, .detail-answer h3 {
+    font-family: var(--mono); color: var(--text); line-height: 1.3;
+    margin: 14px 0 6px;
+  }
+  .answer-text h1, .detail-answer h1 { font-size: 15px; }
+  .answer-text h2, .detail-answer h2 { font-size: 14px; }
+  .answer-text h3, .detail-answer h3 { font-size: 13px; }
+  .answer-text ul, .detail-answer ul,
+  .answer-text ol, .detail-answer ol { margin: 4px 0 10px 20px; }
+  .answer-text li, .detail-answer li { margin-bottom: 4px; line-height: 1.65; }
+  .answer-text strong, .detail-answer strong { color: var(--text); font-weight: 600; }
+  .answer-text em, .detail-answer em { color: var(--text2); font-style: italic; }
+  .answer-text a, .detail-answer a { color: var(--blue); text-decoration: none; word-break: break-all; }
+  .answer-text a:hover, .detail-answer a:hover { text-decoration: underline; }
+  .answer-text code, .detail-answer code {
+    font-family: var(--mono); font-size: 11px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 5px; color: var(--green);
+  }
+  .answer-text pre, .detail-answer pre {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 12px; overflow-x: auto; margin: 8px 0;
+  }
+  .answer-text pre code, .detail-answer pre code {
+    background: none; border: none; padding: 0; font-size: 12px; color: var(--text2);
+  }
+  .answer-text blockquote, .detail-answer blockquote {
+    border-left: 3px solid var(--border2); padding-left: 12px;
+    margin: 8px 0; color: var(--text2);
+  }
+  .answer-text hr, .detail-answer hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
-  /* Sub-queries */
-  .sub-queries {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .sub-query {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--blue);
-    padding: 6px 10px;
-    background: #080f1a;
-    border: 1px solid #1a2d4a;
-    border-radius: 4px;
-  }
-  .sub-query::before { content: '⌕  '; opacity: 0.6; }
+  /* ── Live Demo ───────────────────────────────────────────────────────────── */
+  .demo-section { margin-bottom:40px; }
 
-  /* Spans timeline */
-  .spans {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .span-row {
-    display: grid;
-    grid-template-columns: 20px 100px 1fr 60px;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-family: var(--mono);
-    font-size: 12px;
-  }
-  .span-ok   { color: var(--green); }
-  .span-fail { color: var(--red); }
-  .span-node { color: var(--amber); }
-  .span-changed { color: var(--text3); font-size: 11px; }
-  .span-ms   { color: var(--text3); text-align: right; }
+  .agents-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px; }
+  @media(max-width:600px){ .agents-grid{grid-template-columns:1fr;} }
 
-  /* Anomalies */
-  .anomaly-list { display: flex; flex-direction: column; gap: 6px; }
-  .anomaly {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 14px;
-    border-radius: 4px;
+  .agent-card { background:var(--surface);border:1px solid var(--border2);border-radius:6px;overflow:hidden; }
+  .agent-header { display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--border); }
+  .agent-name { font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green); }
+  .agent-role { font-family:var(--mono);font-size:11px;color:var(--text3);flex:1; }
+  .agent-dot { width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s,box-shadow .3s; }
+  .agent-dot.running { background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 1.5s ease-in-out infinite; }
+  .agent-dot.error   { background:var(--red); }
+  .agent-body { padding:14px;min-height:90px;display:flex;flex-direction:column;gap:8px; }
+  .agent-status-line { font-family:var(--mono);font-size:11px;color:var(--text3); }
+  .agent-query-text  { font-family:var(--mono);font-size:12px;color:var(--text2);line-height:1.5;word-break:break-word; }
+
+  /* Pipeline */
+  .pipeline { display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
+  .pipe-node { font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:4px;border:1px solid var(--border);color:var(--text3);transition:all .2s;white-space:nowrap; }
+  .pipe-node.running { border-color:var(--amber);color:var(--amber);background:var(--amber-bg); }
+  .pipe-node.running::after { content:'';display:inline-block;width:7px;height:7px;border:1.5px solid var(--amber);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-left:5px;vertical-align:middle; }
+  .pipe-node.done    { border-color:var(--green2);color:var(--green);background:var(--green-bg); }
+  .pipe-node.anomaly { border-color:#4a1a1a!important;color:var(--red)!important;background:var(--red-bg)!important; }
+  .pipe-arrow { color:var(--text3);font-family:var(--mono);font-size:11px;flex-shrink:0; }
+
+  /* WS banner */
+  .ws-banner { display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--text3);padding:4px 0 10px; }
+  .ws-dot { width:5px;height:5px;border-radius:50%;flex-shrink:0;transition:background .3s; }
+  .ws-dot.connecting { background:var(--amber);animation:pulse 1s ease-in-out infinite; }
+  .ws-dot.connected  { background:var(--green); }
+  .ws-dot.stopped    { background:var(--text3); }
+  .ws-dot.error      { background:var(--red); }
+
+  /* Run feed */
+  .run-feed { display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent; }
+  .run-feed-empty { font-family:var(--mono);font-size:12px;color:var(--text3);padding:18px;text-align:center;border:1px dashed var(--border);border-radius:4px; }
+
+  .run-item { background:var(--surface);border:1px solid var(--border2);border-radius:6px;overflow:hidden;animation:fadeUp .25s ease; }
+  .run-item.anomalous { border-left:3px solid var(--red); }
+  .run-item-header { display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none; }
+  .run-item-header:hover { background:var(--surface2); }
+  .run-ok   { font-family:var(--mono);font-size:12px;color:var(--green); }
+  .run-fail { font-family:var(--mono);font-size:12px;color:var(--red); }
+  .run-query-text { font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .run-timing { font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap; }
+  .run-anomaly-pill { font-family:var(--mono);font-size:10px;padding:2px 6px;background:var(--red-bg);border:1px solid #4a1a1a;color:var(--red);border-radius:3px;white-space:nowrap; }
+
+  .run-detail { display:none;padding:14px;border-top:1px solid var(--border);flex-direction:column;gap:14px; }
+  .run-detail.open { display:flex; }
+  .detail-label { font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:6px; }
+  .detail-answer {
+    background:var(--surface2); border:1px solid var(--border);
+    border-left:3px solid var(--green); border-radius:4px; padding:14px 16px;
     font-size: 13px;
   }
-  .anomaly.high   { background: var(--red-bg);   border: 1px solid #4a1a1a; }
-  .anomaly.medium { background: var(--amber-bg); border: 1px solid #4a3000; }
-  .anomaly.low    { background: #080f1a;         border: 1px solid #1a2d4a; }
-  .anomaly-badge {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 3px;
-    white-space: nowrap;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-  .anomaly.high   .anomaly-badge { background: #3a0a0a; color: var(--red); }
-  .anomaly.medium .anomaly-badge { background: #2a1800; color: var(--amber); }
-  .anomaly.low    .anomaly-badge { background: #0a1828; color: var(--blue); }
-  .anomaly-desc { color: var(--text2); line-height: 1.5; }
+  .detail-sub-queries { display:flex;flex-direction:column;gap:5px; }
+  .detail-sub-query { font-family:var(--mono);font-size:11px;color:var(--blue);padding:5px 9px;background:#080f1a;border:1px solid #1a2d4a;border-radius:4px; }
+  /* CSS unicode escape — avoids file-encoding ambiguity */
+  .detail-sub-query::before { content:'\2315  ';opacity:.6; }
+  .detail-spans { display:flex;flex-direction:column;gap:5px; }
+  .detail-span { display:grid;grid-template-columns:16px 90px 1fr 55px 55px;align-items:center;gap:10px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:11px; }
+  .span-ok   { color:var(--green); }
+  .span-fail { color:var(--red); }
+  .span-node { color:var(--amber); }
+  .span-changed { color:var(--text3);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .span-ms  { color:var(--text3);text-align:right; }
+  .span-tok { color:var(--text3);text-align:right;font-size:10px; }
 
-  /* No anomalies */
-  .no-anomalies {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--green);
-    padding: 10px 14px;
-    background: var(--green-bg);
-    border: 1px solid var(--green2);
-    border-radius: 4px;
-  }
-  .no-anomalies::before { content: '✓  '; }
+  /* Anomaly cards — shared */
+  .anomaly-list { display:flex;flex-direction:column;gap:6px; }
+  .anomaly { display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:4px;font-size:13px; }
+  .anomaly.high   { background:var(--red-bg);   border:1px solid #4a1a1a; }
+  .anomaly.medium { background:var(--amber-bg); border:1px solid #4a3000; }
+  .anomaly.low    { background:#080f1a;          border:1px solid #1a2d4a; }
+  .anomaly-badge  { font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:1px; }
+  .anomaly.high   .anomaly-badge { background:#3a0a0a;color:var(--red); }
+  .anomaly.medium .anomaly-badge { background:#2a1800;color:var(--amber); }
+  .anomaly.low    .anomaly-badge { background:#0a1828;color:var(--blue); }
+  .anomaly-desc   { color:var(--text2);line-height:1.5; }
+  .no-anomalies   { font-family:var(--mono);font-size:12px;color:var(--green);padding:10px 14px;background:var(--green-bg);border:1px solid var(--green2);border-radius:4px; }
+  .no-anomalies::before { content:'\2713  '; }
 
-  /* Run ID footer */
-  .run-meta {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text3);
-    text-align: right;
-    margin-top: 4px;
-  }
+  /* Anomaly log */
+  .anomaly-log { display:flex;flex-direction:column;gap:5px;margin-top:4px;max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent; }
+  .anomaly-log-empty { font-family:var(--mono);font-size:11px;color:var(--green);padding:8px 12px;background:var(--green-bg);border:1px solid var(--green2);border-radius:4px; }
+  .anomaly-log-empty::before { content:'\2713  '; }
+  .anomaly-log-entry { display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border-radius:4px;animation:fadeUp .2s ease;font-size:12px; }
+  .anomaly-log-entry.high   { background:var(--red-bg);  border:1px solid #4a1a1a; }
+  .anomaly-log-entry.medium { background:var(--amber-bg);border:1px solid #4a3000; }
+  .ale-badge { font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:1px; }
+  .anomaly-log-entry.high   .ale-badge { background:#3a0a0a;color:var(--red); }
+  .anomaly-log-entry.medium .ale-badge { background:#2a1800;color:var(--amber); }
+  .ale-node { font-family:var(--mono);font-size:10px;color:var(--amber);flex-shrink:0; }
+  .ale-desc { color:var(--text2);line-height:1.4;flex:1; }
 
-  /* Error */
-  .error-msg {
-    display: none;
-    padding: 12px 16px;
-    background: var(--red-bg);
-    border: 1px solid #4a1a1a;
-    border-radius: 6px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--red);
-    margin-top: 10px;
+  .detail-run-id { font-family:var(--mono);font-size:10px;color:var(--text3);text-align:right; }
+
+  /* ── Divider ─────────────────────────────────────────────────────────────── */
+  .divider { border:none;border-top:1px solid var(--border2);margin:40px 0; }
+
+  /* ── Test Scenarios ──────────────────────────────────────────────────────── */
+  .test-section { margin-bottom:40px; }
+  .test-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px; }
+  @media(max-width:600px){ .test-grid{grid-template-columns:1fr;} }
+
+  .test-btn {
+    display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+    background:var(--surface);border:1px solid var(--border2);border-radius:6px;
+    padding:12px 14px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;
   }
-  .error-msg.visible { display: block; }
+  .test-btn:hover { background:var(--surface2); }
+  .test-btn:disabled { opacity:.4;cursor:not-allowed; }
+  .test-btn.clean       { border-left:3px solid var(--green2); }
+  .test-btn.clean:hover { border-left-color:var(--green); }
+  .test-btn.anomaly-btn       { border-left:3px solid #4a1a1a; }
+  .test-btn.anomaly-btn:hover { border-left-color:var(--red); }
+  .test-btn.medium-btn        { border-left:3px solid #4a3000; }
+  .test-btn.medium-btn:hover  { border-left-color:var(--amber); }
+  .test-btn-label { font-family:var(--mono);font-size:11px;font-weight:700; }
+  .test-btn.clean       .test-btn-label { color:var(--green); }
+  .test-btn.anomaly-btn .test-btn-label { color:var(--red); }
+  .test-btn.medium-btn  .test-btn-label { color:var(--amber); }
+  .test-btn-desc { font-size:12px;color:var(--text3);line-height:1.4; }
+  .test-expected { font-family:var(--mono);font-size:10px;margin-top:2px;padding:2px 6px;border-radius:3px; }
+  .test-btn.clean       .test-expected { color:var(--green);background:var(--green-bg);border:1px solid var(--green2); }
+  .test-btn.anomaly-btn .test-expected { color:var(--red);  background:var(--red-bg);  border:1px solid #4a1a1a; }
+  .test-btn.medium-btn  .test-expected { color:var(--amber);background:var(--amber-bg);border:1px solid #4a3000; }
+
+  .test-progress { display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;margin-bottom:12px;font-family:var(--mono);font-size:12px;color:var(--text2); }
+  .test-progress.visible { display:flex; }
+  .test-result { display:flex;flex-direction:column;gap:16px;animation:fadeUp .3s ease; }
+
+  .test-verdict { display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:6px;font-family:var(--mono);font-size:13px;font-weight:700; }
+  .test-verdict.pass { background:var(--green-bg);border:1px solid var(--green2);color:var(--green); }
+  .test-verdict.fail { background:var(--red-bg);  border:1px solid #4a1a1a;     color:var(--red); }
+  .test-verdict.warn { background:var(--amber-bg);border:1px solid #4a3000;     color:var(--amber); }
+  .verdict-icon { font-size:16px; }
+  .verdict-text { flex:1; }
+  .verdict-run-id { font-size:10px;color:var(--text3);font-weight:400; }
+
+  /* ── Manual query ────────────────────────────────────────────────────────── */
+  .query-section { margin-bottom:32px; }
+  .query-label { font-family:var(--mono);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:8px; }
+  .query-label::before { content:'>';color:var(--green); }
+  .query-input-row { display:flex;gap:10px;align-items:stretch; }
+  textarea { flex:1;background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;padding:14px 16px;resize:none;min-height:80px;outline:none;transition:border-color .15s; }
+  textarea::placeholder { color:var(--text3); }
+  textarea:focus { border-color:var(--green2); }
+  button.run-btn { background:var(--green-bg);border:1px solid var(--green2);border-radius:6px;color:var(--green);font-family:var(--mono);font-size:12px;font-weight:700;padding:0 20px;cursor:pointer;transition:all .15s;min-width:80px;letter-spacing:.04em; }
+  button.run-btn:hover { background:#0f2214;border-color:var(--green); }
+  button.run-btn:disabled { opacity:.4;cursor:not-allowed; }
+  .progress { display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--text2); }
+  .progress.visible { display:flex; }
+  .spinner { width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0; }
+
+  .result { display:none;flex-direction:column;gap:16px;animation:fadeUp .3s ease; }
+  .result.visible { display:flex; }
+  .answer-card { background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--green);border-radius:6px;padding:20px; }
+  .sub-queries { display:flex;flex-direction:column;gap:6px; }
+  .sub-query { font-family:var(--mono);font-size:12px;color:var(--blue);padding:6px 10px;background:#080f1a;border:1px solid #1a2d4a;border-radius:4px; }
+  .sub-query::before { content:'\2315  ';opacity:.6; }
+  .spans { display:flex;flex-direction:column;gap:6px; }
+  .span-row { display:grid;grid-template-columns:20px 100px 1fr 60px 60px;align-items:center;gap:12px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:12px; }
+  .run-meta { font-family:var(--mono);font-size:11px;color:var(--text3);text-align:right;margin-top:4px; }
+  .error-msg { display:none;padding:12px 16px;background:var(--red-bg);border:1px solid #4a1a1a;border-radius:6px;font-family:var(--mono);font-size:12px;color:var(--red);margin-top:10px; }
+  .error-msg.visible { display:block; }
 </style>
 </head>
 <body>
@@ -347,11 +281,107 @@
     <div class="status-dot"></div>
   </header>
 
+  <!-- ── Live Demo ──────────────────────────────────────────────────────────── -->
+  <div class="demo-section">
+    <div class="section-label">live agents</div>
+
+    <div class="agents-grid">
+      <div class="agent-card">
+        <div class="agent-header">
+          <span class="agent-name">AGENT 1</span>
+          <span class="agent-role">query generator</span>
+          <span class="agent-dot" id="agent1Dot"></span>
+        </div>
+        <div class="agent-body">
+          <div class="agent-status-line" id="agent1Status">waiting for connection...</div>
+          <div class="agent-query-text" id="agent1Query"></div>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div class="agent-header">
+          <span class="agent-name">AGENT 2</span>
+          <span class="agent-role">processor</span>
+          <span class="agent-dot" id="agent2Dot"></span>
+        </div>
+        <div class="agent-body">
+          <div class="pipeline" id="pipeline">
+            <div class="pipe-node" id="pipe-plan">plan</div>
+            <div class="pipe-arrow">&rarr;</div>
+            <div class="pipe-node" id="pipe-search">search</div>
+            <div class="pipe-arrow">&rarr;</div>
+            <div class="pipe-node" id="pipe-synthesize">synthesize</div>
+          </div>
+          <div class="agent-query-text" id="agent2Query"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ws-banner">
+      <div class="ws-dot connecting" id="wsDot"></div>
+      <span id="wsText">connecting...</span>
+    </div>
+
+    <div class="section-label" style="margin-top:16px">
+      completed runs
+      <span class="badge ok" id="runCountBadge" style="display:none">0 runs</span>
+    </div>
+    <div class="run-feed" id="runFeed">
+      <div class="run-feed-empty" id="runFeedEmpty">Agents are starting up &mdash; first run will appear here.</div>
+    </div>
+
+    <div class="section-label" style="margin-top:20px">
+      anomaly log
+      <span class="badge anomaly" id="anomalyCountBadge" style="display:none">0 detected</span>
+    </div>
+    <div id="anomalyLogEmpty" class="anomaly-log-empty">No anomalies detected yet</div>
+    <div class="anomaly-log" id="anomalyLogList" style="display:none"></div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ── Test Scenarios ────────────────────────────────────────────────────── -->
+  <div class="test-section">
+    <div class="section-label">test anomaly detectors</div>
+
+    <div class="test-grid">
+      <button class="test-btn clean" onclick="runTest('clean')">
+        <span class="test-btn-label">Clean Run</span>
+        <span class="test-btn-desc">Normal query through the real pipeline</span>
+        <span class="test-expected">expect: no anomalies</span>
+      </button>
+      <button class="test-btn anomaly-btn" onclick="runTest('stale_state')">
+        <span class="test-btn-label">Stale State</span>
+        <span class="test-btn-desc">plan returns state unchanged &mdash; diff is empty</span>
+        <span class="test-expected">expect: HIGH stale_state</span>
+      </button>
+      <button class="test-btn medium-btn" onclick="runTest('token_spike')">
+        <span class="test-btn-label">Token Spike</span>
+        <span class="test-btn-desc">plan reports 9999 tokens (&gt;2&times; avg or &gt;1000 baseline)</span>
+        <span class="test-expected">expect: MED token_spike</span>
+      </button>
+      <button class="test-btn anomaly-btn" onclick="runTest('unexpected_loop')">
+        <span class="test-btn-label">Unexpected Loop</span>
+        <span class="test-btn-desc">plan loops 3&times; before real planning</span>
+        <span class="test-expected">expect: HIGH unexpected_loop</span>
+      </button>
+    </div>
+
+    <div class="test-progress" id="testProgress">
+      <div class="spinner"></div>
+      <span id="testProgressText">Running scenario...</span>
+    </div>
+    <div id="testResultArea"></div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ── Manual query ───────────────────────────────────────────────────────── -->
   <div class="query-section">
-    <div class="query-label">query</div>
+    <div class="query-label">manual query</div>
     <div class="query-input-row">
-      <textarea id="queryInput" placeholder="Ask anything — the agent will research and synthesize an answer..." rows="3"></textarea>
-      <button id="runBtn" onclick="runQuery()">RUN</button>
+      <textarea id="queryInput" placeholder="Ask anything &mdash; the agent will research and synthesize an answer..." rows="3"></textarea>
+      <button class="run-btn" id="runBtn" onclick="runQuery()">RUN</button>
     </div>
     <div class="progress" id="progress">
       <div class="spinner"></div>
@@ -361,151 +391,413 @@
   </div>
 
   <div class="result" id="result">
-
     <div>
       <div class="section-label">answer</div>
-      <div class="answer-card">
-        <div class="answer-text" id="answerText"></div>
-      </div>
+      <div class="answer-card"><div class="answer-text" id="answerText"></div></div>
     </div>
-
     <div>
       <div class="section-label">search queries generated</div>
       <div class="sub-queries" id="subQueries"></div>
     </div>
-
     <div>
       <div class="section-label">execution trace</div>
       <div class="spans" id="spans"></div>
     </div>
-
     <div>
       <div class="section-label">anomaly detection</div>
       <div id="anomalies"></div>
     </div>
-
     <div class="run-meta" id="runMeta"></div>
-
   </div>
 
 </div>
 
 <script>
-  const progressMessages = [
-    "Planning search queries...",
-    "Searching the web...",
-    "Synthesizing answer...",
-    "Running anomaly detection...",
-  ];
-  let progressTimer;
+// Configure marked: GitHub-flavoured markdown, soft line breaks
+marked.use({ gfm: true, breaks: true });
+const md = (text) => marked.parse(String(text || ''));
 
-  function setProgress(msg) {
-    document.getElementById("progressText").textContent = msg;
+// ── WebSocket ───────────────────────────────────────────────────────────────
+
+let ws = null;
+let liveRunCount = 0;
+let liveAnomalyCount = 0;
+const MAX_FEED_RUNS = 8;
+
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => {
+    ws._ping = setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send('ping'); }, 20000);
+  };
+  ws.onmessage = (evt) => {
+    let msg; try { msg = JSON.parse(evt.data); } catch { return; }
+    handleWsMessage(msg);
+  };
+  ws.onclose = () => {
+    clearInterval(ws && ws._ping);
+    setWsStatus('stopped', 'agents stopped');
+    setDot('agent1Dot', '');
+    setDot('agent2Dot', '');
+    document.getElementById('agent1Status').textContent = 'stopped';
+  };
+  ws.onerror = () => setWsStatus('error', 'connection error');
+}
+
+function disconnectWS() {
+  if (ws) { clearInterval(ws._ping); ws.close(); ws = null; }
+}
+
+// ── WS messages ─────────────────────────────────────────────────────────────
+
+function handleWsMessage(msg) {
+  switch (msg.type) {
+    case 'connected':
+      setWsStatus('connected', '2 agents running');
+      setDot('agent1Dot', 'running');
+      setDot('agent2Dot', 'running');
+      break;
+    case 'agent1_thinking':
+      setDot('agent1Dot', 'running');
+      document.getElementById('agent1Status').textContent = 'generating query...';
+      document.getElementById('agent1Query').textContent = '';
+      break;
+    case 'agent1_query':
+      document.getElementById('agent1Status').textContent = 'generated:';
+      document.getElementById('agent1Query').textContent = msg.query;
+      break;
+    case 'agent1_error':
+      setDot('agent1Dot', 'error');
+      document.getElementById('agent1Status').textContent = 'error: ' + msg.error;
+      break;
+    case 'agent2_start':
+      setDot('agent2Dot', 'running');
+      resetPipeline();
+      document.getElementById('agent2Query').textContent = msg.query;
+      break;
+    case 'node_start':
+      setPipeNode(msg.node, 'running');
+      break;
+    case 'node_done':
+      setPipeNode(msg.node, (msg.anomalies && msg.anomalies.length) ? 'anomaly' : 'done', msg.ms);
+      if (msg.anomalies) msg.anomalies.forEach(a => addAnomalyLogEntry(a, msg.node));
+      break;
+    case 'agent2_complete':
+      setDot('agent2Dot', 'running');
+      addRunToFeed(msg);
+      break;
+    case 'agent2_error':
+      setDot('agent2Dot', 'error');
+      document.getElementById('agent2Query').textContent = 'Error: ' + msg.error;
+      break;
   }
+}
 
-  async function runQuery() {
-    const query = document.getElementById("queryInput").value.trim();
-    if (!query) return;
+// ── Pipeline ────────────────────────────────────────────────────────────────
 
-    const btn      = document.getElementById("runBtn");
-    const progress = document.getElementById("progress");
-    const result   = document.getElementById("result");
-    const errorMsg = document.getElementById("errorMsg");
-
-    btn.disabled = true;
-    result.classList.remove("visible");
-    errorMsg.classList.remove("visible");
-    progress.classList.add("visible");
-
-    // Cycle through progress messages
-    let i = 0;
-    setProgress(progressMessages[0]);
-    progressTimer = setInterval(() => {
-      i = (i + 1) % progressMessages.length;
-      setProgress(progressMessages[i]);
-    }, 2200);
-
-    try {
-      const res = await fetch("/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Request failed");
-      }
-
-      const data = await res.json();
-      renderResult(data);
-
-    } catch (err) {
-      errorMsg.textContent = `Error: ${err.message}`;
-      errorMsg.classList.add("visible");
-    } finally {
-      clearInterval(progressTimer);
-      progress.classList.remove("visible");
-      btn.disabled = false;
-    }
-  }
-
-  function renderResult(data) {
-    // Answer
-    document.getElementById("answerText").textContent = data.answer;
-
-    // Sub-queries
-    const sqEl = document.getElementById("subQueries");
-    sqEl.innerHTML = data.sub_queries.map(q =>
-      `<div class="sub-query">${escHtml(q)}</div>`
-    ).join("");
-
-    // Spans
-    const spansEl = document.getElementById("spans");
-    spansEl.innerHTML = data.spans.map(s => {
-      const ok      = s.success ? '<span class="span-ok">✓</span>' : '<span class="span-fail">✗</span>';
-      const changed = s.changed.length ? s.changed.join(", ") : "—";
-      return `
-        <div class="span-row">
-          ${ok}
-          <span class="span-node">${escHtml(s.node)}</span>
-          <span class="span-changed">${escHtml(changed)}</span>
-          <span class="span-ms">${s.ms}ms</span>
-        </div>`;
-    }).join("");
-
-    // Anomalies
-    const anomEl = document.getElementById("anomalies");
-    if (!data.anomalies.length) {
-      anomEl.innerHTML = `<div class="no-anomalies">No anomalies detected in this run</div>`;
-    } else {
-      anomEl.innerHTML = `<div class="anomaly-list">` +
-        data.anomalies.map(a => `
-          <div class="anomaly ${a.severity}">
-            <span class="anomaly-badge">${a.severity.toUpperCase()}</span>
-            <span class="anomaly-desc"><strong>${escHtml(a.type)}</strong> — ${escHtml(a.description)}</span>
-          </div>`
-        ).join("") +
-        `</div>`;
-    }
-
-    // Run ID
-    document.getElementById("runMeta").textContent = `run_id: ${data.run_id}`;
-
-    document.getElementById("result").classList.add("visible");
-    document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
-
-  // Submit on Ctrl+Enter
-  document.getElementById("queryInput").addEventListener("keydown", e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runQuery();
+function resetPipeline() {
+  ['plan','search','synthesize'].forEach(n => {
+    const el = document.getElementById('pipe-' + n);
+    el.className = 'pipe-node';
+    el.textContent = n;
   });
+}
+
+function setPipeNode(node, state, ms) {
+  const el = document.getElementById('pipe-' + node);
+  if (!el) return;
+  el.className = 'pipe-node ' + state;
+  if ((state === 'done' || state === 'anomaly') && ms != null) {
+    el.textContent = node + ' ' + ms + 'ms' + (state === 'anomaly' ? ' !' : '');
+  } else {
+    el.textContent = node;
+  }
+}
+
+// ── Anomaly log ─────────────────────────────────────────────────────────────
+
+function addAnomalyLogEntry(a, nodeName) {
+  document.getElementById('anomalyLogEmpty').style.display = 'none';
+  const list = document.getElementById('anomalyLogList');
+  list.style.display = 'flex';
+
+  liveAnomalyCount++;
+  const badge = document.getElementById('anomalyCountBadge');
+  badge.style.display = '';
+  badge.textContent = liveAnomalyCount + ' detected';
+
+  const entry = document.createElement('div');
+  entry.className = 'anomaly-log-entry ' + esc(a.severity);
+  entry.innerHTML =
+    `<span class="ale-badge">${esc(a.severity.toUpperCase())}</span>` +
+    `<span class="ale-node">${esc(nodeName || '')}</span>` +
+    `<span class="ale-desc"><strong>${esc(a.type)}</strong> &mdash; ${esc(a.description)}</span>`;
+  list.insertBefore(entry, list.firstChild);
+  while (list.children.length > 20) list.removeChild(list.lastChild);
+}
+
+// ── Run feed ────────────────────────────────────────────────────────────────
+
+function addRunToFeed(data) {
+  const feed = document.getElementById('runFeed');
+  const empty = document.getElementById('runFeedEmpty');
+  if (empty) empty.remove();
+  while (feed.children.length >= MAX_FEED_RUNS) feed.removeChild(feed.lastChild);
+
+  liveRunCount++;
+  const cb = document.getElementById('runCountBadge');
+  cb.style.display = '';
+  cb.textContent = liveRunCount + ' run' + (liveRunCount !== 1 ? 's' : '');
+
+  const totalMs = (data.spans || []).reduce((s, sp) => s + sp.ms, 0);
+  const hasAnomalies = data.anomalies && data.anomalies.length > 0;
+  const runId = data.run_id;
+
+  const anomPill = hasAnomalies
+    ? `<span class="run-anomaly-pill">${data.anomalies.length} anomal${data.anomalies.length > 1 ? 'ies' : 'y'}</span>`
+    : '';
+
+  const spansHtml = (data.spans || []).map(s => {
+    const ok = s.success ? '<span class="span-ok">&#10003;</span>' : '<span class="span-fail">&#10007;</span>';
+    const changed = s.changed && s.changed.length ? s.changed.join(', ') : '&mdash;';
+    const tok = s.tokens ? s.tokens + ' tok' : '&mdash;';
+    return `<div class="detail-span">${ok}<span class="span-node">${esc(s.node)}</span><span class="span-changed">${esc(changed)}</span><span class="span-ms">${s.ms}ms</span><span class="span-tok">${tok}</span></div>`;
+  }).join('');
+
+  const subQHtml = (data.sub_queries || []).map(q => `<div class="detail-sub-query">${esc(q)}</div>`).join('');
+
+  const anomHtml = !hasAnomalies
+    ? `<div class="no-anomalies">No anomalies detected</div>`
+    : `<div class="anomaly-list">${data.anomalies.map(a => `
+        <div class="anomaly ${esc(a.severity)}">
+          <span class="anomaly-badge">${esc(a.severity.toUpperCase())}</span>
+          <span class="anomaly-desc"><strong>${esc(a.type)}</strong> &mdash; ${esc(a.description)}</span>
+        </div>`).join('')}</div>`;
+
+  const item = document.createElement('div');
+  item.className = 'run-item' + (hasAnomalies ? ' anomalous' : '');
+  item.innerHTML = `
+    <div class="run-item-header" onclick="toggleDetail('${runId}')">
+      <span class="run-ok">&#10003;</span>
+      <span class="run-query-text">${esc(data.query || '')}</span>
+      ${anomPill}
+      <span class="run-timing">${totalMs}ms</span>
+    </div>
+    <div class="run-detail" id="detail-${runId}">
+      <div><div class="detail-label">answer</div><div class="detail-answer">${md(data.answer)}</div></div>
+      <div><div class="detail-label">search queries</div><div class="detail-sub-queries">${subQHtml}</div></div>
+      <div><div class="detail-label">execution trace</div><div class="detail-spans">${spansHtml}</div></div>
+      <div><div class="detail-label">anomaly detection</div>${anomHtml}</div>
+      <div class="detail-run-id">run_id: ${esc(runId)}</div>
+    </div>`;
+  feed.insertBefore(item, feed.firstChild);
+}
+
+function toggleDetail(runId) {
+  const el = document.getElementById('detail-' + runId);
+  if (el) el.classList.toggle('open');
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function setWsStatus(state, text) {
+  document.getElementById('wsDot').className = 'ws-dot ' + state;
+  document.getElementById('wsText').textContent = text;
+}
+
+function setDot(id, state) {
+  document.getElementById(id).className = 'agent-dot' + (state ? ' ' + state : '');
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Test scenarios ───────────────────────────────────────────────────────────
+
+const _testBtns = document.querySelectorAll('.test-btn');
+
+async function runTest(scenario) {
+  _testBtns.forEach(b => b.disabled = true);
+  const prog = document.getElementById('testProgress');
+  const area = document.getElementById('testResultArea');
+  prog.classList.add('visible');
+  area.innerHTML = '';
+
+  const labels = {
+    clean:            'Running clean query...',
+    stale_state:      'Injecting stale-state scenario...',
+    token_spike:      'Injecting token-spike scenario...',
+    unexpected_loop:  'Injecting loop scenario (3 plan visits)...',
+  };
+  document.getElementById('testProgressText').textContent = labels[scenario] || 'Running...';
+
+  try {
+    const res = await fetch('/run/test', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({scenario}),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Request failed'); }
+    renderTestResult(scenario, await res.json());
+  } catch (err) {
+    area.innerHTML = `<div class="error-msg visible">Error: ${esc(err.message)}</div>`;
+  } finally {
+    prog.classList.remove('visible');
+    _testBtns.forEach(b => b.disabled = false);
+  }
+}
+
+function renderTestResult(scenario, data) {
+  const area = document.getElementById('testResultArea');
+  const hasAnomalies = data.anomalies && data.anomalies.length > 0;
+  const totalMs = (data.spans || []).reduce((s, sp) => s + sp.ms, 0);
+
+  let verdictClass, verdictIcon, verdictText;
+  if (scenario === 'clean') {
+    verdictClass = !hasAnomalies ? 'pass' : 'fail';
+    verdictIcon  = !hasAnomalies ? '&#10003;' : '&#10007;';
+    verdictText  = !hasAnomalies ? 'PASS &mdash; No anomalies (expected)' : 'UNEXPECTED &mdash; Anomalies found on clean run';
+  } else {
+    if (hasAnomalies) {
+      verdictClass = data.anomalies[0].severity === 'high' ? 'fail' : 'warn';
+      verdictIcon  = '&#9888;';
+      verdictText  = `DETECTED &mdash; ${data.anomalies.length} anomal${data.anomalies.length > 1 ? 'ies' : 'y'} caught`;
+    } else {
+      verdictClass = 'fail';
+      verdictIcon  = '&#10007;';
+      verdictText  = 'MISS &mdash; Anomaly expected but not detected';
+    }
+  }
+
+  const spansHtml = (data.spans || []).map(s => {
+    const ok = s.success ? '<span class="span-ok">&#10003;</span>' : '<span class="span-fail">&#10007;</span>';
+    const changed = s.changed && s.changed.length ? s.changed.join(', ') : '&mdash;';
+    const tok = s.tokens ? s.tokens + ' tok' : '&mdash;';
+    return `<div class="span-row">${ok}<span class="span-node">${esc(s.node)}</span><span class="span-changed" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(changed)}</span><span class="span-ms">${s.ms}ms</span><span class="span-ms" style="font-size:10px">${tok}</span></div>`;
+  }).join('');
+
+  const subQHtml = (data.sub_queries || []).map(q => `<div class="sub-query">${esc(q)}</div>`).join('');
+
+  const anomHtml = !hasAnomalies
+    ? `<div class="no-anomalies">No anomalies detected in this run</div>`
+    : `<div class="anomaly-list">${data.anomalies.map(a => `
+        <div class="anomaly ${esc(a.severity)}">
+          <span class="anomaly-badge">${esc(a.severity.toUpperCase())}</span>
+          <span class="anomaly-desc"><strong>${esc(a.type)}</strong> &mdash; ${esc(a.description)}</span>
+        </div>`).join('')}</div>`;
+
+  area.innerHTML = `
+    <div class="test-result">
+      <div class="test-verdict ${verdictClass}">
+        <span class="verdict-icon">${verdictIcon}</span>
+        <span class="verdict-text">${verdictText}</span>
+        <span class="verdict-run-id">run_id: ${esc(data.run_id)}</span>
+      </div>
+      <div>
+        <div class="section-label">answer</div>
+        <div class="answer-card"><div class="answer-text">${md(data.answer)}</div></div>
+      </div>
+      <div>
+        <div class="section-label">search queries generated</div>
+        <div class="sub-queries">${subQHtml || '<div class="no-anomalies" style="color:var(--text3)">No sub-queries (plan node may have produced nothing)</div>'}</div>
+      </div>
+      <div>
+        <div class="section-label">execution trace &mdash; ${totalMs}ms total</div>
+        <div class="spans">${spansHtml}</div>
+      </div>
+      <div>
+        <div class="section-label">anomaly detection</div>
+        ${anomHtml}
+      </div>
+    </div>`;
+}
+
+// ── Manual query ─────────────────────────────────────────────────────────────
+
+const progressMessages = [
+  'Planning search queries...', 'Searching the web...',
+  'Synthesizing answer...', 'Running anomaly detection...',
+];
+let progressTimer;
+
+async function runQuery() {
+  const query = document.getElementById('queryInput').value.trim();
+  if (!query) return;
+  const btn = document.getElementById('runBtn');
+  const progress = document.getElementById('progress');
+  const result = document.getElementById('result');
+  const errorMsg = document.getElementById('errorMsg');
+
+  btn.disabled = true;
+  result.classList.remove('visible');
+  errorMsg.classList.remove('visible');
+  progress.classList.add('visible');
+
+  let i = 0;
+  document.getElementById('progressText').textContent = progressMessages[0];
+  progressTimer = setInterval(() => {
+    i = (i + 1) % progressMessages.length;
+    document.getElementById('progressText').textContent = progressMessages[i];
+  }, 2200);
+
+  try {
+    const res = await fetch('/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query}),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Request failed'); }
+    renderManualResult(await res.json());
+  } catch (err) {
+    errorMsg.textContent = `Error: ${err.message}`;
+    errorMsg.classList.add('visible');
+  } finally {
+    clearInterval(progressTimer);
+    progress.classList.remove('visible');
+    btn.disabled = false;
+  }
+}
+
+function renderManualResult(data) {
+  // Answer — rendered as markdown
+  document.getElementById('answerText').innerHTML = md(data.answer);
+
+  document.getElementById('subQueries').innerHTML = (data.sub_queries || []).map(q =>
+    `<div class="sub-query">${esc(q)}</div>`
+  ).join('');
+
+  document.getElementById('spans').innerHTML = (data.spans || []).map(s => {
+    const ok = s.success ? '<span class="span-ok">&#10003;</span>' : '<span class="span-fail">&#10007;</span>';
+    const changed = s.changed && s.changed.length ? s.changed.join(', ') : '&mdash;';
+    const tok = s.tokens ? s.tokens + ' tok' : '&mdash;';
+    return `<div class="span-row">${ok}<span class="span-node">${esc(s.node)}</span><span class="span-changed" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(changed)}</span><span class="span-ms">${s.ms}ms</span><span class="span-ms" style="font-size:10px">${tok}</span></div>`;
+  }).join('');
+
+  const anomEl = document.getElementById('anomalies');
+  if (!data.anomalies || !data.anomalies.length) {
+    anomEl.innerHTML = `<div class="no-anomalies">No anomalies detected in this run</div>`;
+  } else {
+    anomEl.innerHTML = `<div class="anomaly-list">${data.anomalies.map(a => `
+      <div class="anomaly ${esc(a.severity)}">
+        <span class="anomaly-badge">${esc(a.severity.toUpperCase())}</span>
+        <span class="anomaly-desc"><strong>${esc(a.type)}</strong> &mdash; ${esc(a.description)}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  document.getElementById('runMeta').textContent = `run_id: ${data.run_id}`;
+  document.getElementById('result').classList.add('visible');
+  document.getElementById('result').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+// ── Page lifecycle ───────────────────────────────────────────────────────────
+
+document.getElementById('queryInput').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runQuery();
+});
+
+window.addEventListener('load', () => connectWS());
+window.addEventListener('beforeunload', () => disconnectWS());
 </script>
 </body>
 </html>
